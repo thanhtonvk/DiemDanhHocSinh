@@ -163,7 +163,7 @@ public class DiemDanhActivity extends AppCompatActivity {
 
     }
 
-    float THRESHOLD_FACE = 0.8f;
+    float THRESHOLD_FACE = 0.4f;
 
     private SinhVien findSinhVien(float[] embFace) {
         SinhVien result = null;

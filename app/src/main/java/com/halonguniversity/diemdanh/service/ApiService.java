@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.halonguniversity.diemdanh.entities.LoginResponse;
 import com.halonguniversity.diemdanh.entities.SinhVien;
 import com.halonguniversity.diemdanh.entities.SinhVienLopTC;
+import com.halonguniversity.diemdanh.utils.Constants;
 
 import java.util.List;
 import java.util.Map;
@@ -22,12 +23,12 @@ import retrofit2.http.PUT;
 import retrofit2.http.Query;
 
 public interface ApiService {
-    String BASE_URL = "https://lastsparklycat86.conveyor.cloud/";
+//    String BASE_URL = "https://lastsparklycat86.conveyor.cloud/";
     Gson gson = new GsonBuilder().setDateFormat("dd/MM/yyyy").create();
     OkHttpClient client = new OkHttpClient.Builder()
             .connectTimeout(100, TimeUnit.SECONDS).writeTimeout(100, TimeUnit.SECONDS)
             .readTimeout(100, TimeUnit.SECONDS).build();
-    ApiService api = new Retrofit.Builder().baseUrl(BASE_URL)
+    ApiService api = new Retrofit.Builder().baseUrl(Constants.url)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build().create(ApiService.class);
 

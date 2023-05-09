@@ -1,5 +1,6 @@
 package com.halonguniversity.diemdanh.activities;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.ProgressDialog;
@@ -10,6 +11,11 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.halonguniversity.diemdanh.R;
 import com.halonguniversity.diemdanh.entities.LoginResponse;
 import com.halonguniversity.diemdanh.service.ApiService;
@@ -29,6 +35,21 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        DatabaseReference myRef = database.getReference("url");
+        myRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                Constants.url = snapshot.getValue(String.class);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+
+
         initView();
         login();
     }
@@ -57,7 +78,7 @@ public class LoginActivity extends AppCompatActivity {
                     @Override
                     public void onFailure(Call<List<LoginResponse>> call, Throwable t) {
                         dialog.dismiss();
-                        Log.e("TAG", "onFailure: "+t.getMessage() );
+                        Log.e("TAG", "onFailure: " + t.getMessage());
                         Toast.makeText(getApplicationContext(), "Lỗi kết nối", Toast.LENGTH_LONG).show();
                     }
                 });

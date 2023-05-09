@@ -9,6 +9,7 @@ public class Constants {
     public static List<LoginResponse> loginResponses;
     public static int maloptc;
     public static SinhVien sinhVien;
+    public static String url;
     public static float[] string2array(String embFace) {
         String[] emb = embFace.split(" ");
         int n = emb.length;
