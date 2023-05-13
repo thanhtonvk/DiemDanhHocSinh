@@ -15,6 +15,11 @@ import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.RectF;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.SparseArray;
@@ -99,28 +104,72 @@ public class CapNhatFaceActivity extends AppCompatActivity {
         });
     }
 
-    FaceDetector faceDetector;
+    private Bitmap detectFace(Bitmap bitmap) {
+        BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
+        bitmapOptions.inMutable = true;
+        Bitmap defaultBitmap = bitmap;
+        Paint rectPaint = new Paint();
+        rectPaint.setStrokeWidth(5);
+        rectPaint.setColor(Color.CYAN);
+        rectPaint.setStyle(Paint.Style.STROKE);
 
-    private List<Bitmap> detectFace(Bitmap bitmap) {
-        List<Bitmap> faces = new ArrayList<>();
-        Frame frame = new Frame.Builder().setBitmap(bitmap).build();
+        Bitmap temporaryBitmap = Bitmap.createBitmap(defaultBitmap.getWidth(), defaultBitmap
+                .getHeight(), Bitmap.Config.RGB_565);
+        Canvas canvas = new Canvas(temporaryBitmap);
+        canvas.drawBitmap(defaultBitmap, 0, 0, null);
+
+
+        Frame frame = new Frame.Builder().setBitmap(defaultBitmap).build();
         SparseArray<Face> sparseArray = faceDetector.detect(frame);
+        float left = 0, right = 0, top = 0, bottom = 0;
         for (int i = 0; i < sparseArray.size(); i++) {
             Face face = sparseArray.valueAt(i);
-            float left = face.getPosition().x;
-            float top = face.getPosition().y;
-            if (left < 0) {
-                left = 0;
-            }
-            if (top < 0) {
-                top = 0;
-            }
-            Bitmap result = Bitmap.createBitmap(bitmap, (int) left, (int) top, (int) face.getWidth(), (int) face.getHeight());
-            faces.add(result);
+            left = face.getPosition().x;
+            top = face.getPosition().y;
+            right = left + face.getWidth();
+            bottom = top + face.getHeight();
+            float cornerRadius = 2.0f;
+            RectF rectF = new RectF(left, top, right, bottom);
+            canvas.drawRoundRect(rectF, cornerRadius, cornerRadius, rectPaint);
         }
-        return faces;
+        if (left < 0 || top < 0 || bottom > bitmap.getHeight() || right > bitmap.getWidth() || bitmap.getWidth() <= 0 || bitmap.getHeight() <= 0) {
 
+            return bitmap;
+        } else {
+            if (right - left <= 0 || bottom - top <= 0) {
+
+                return bitmap;
+            } else {
+                Bitmap result = Bitmap.createBitmap(bitmap, (int) left, (int) top, (int) right - (int) left, (int) bottom - (int) top);
+
+                return result;
+            }
+        }
     }
+
+
+    FaceDetector faceDetector;
+
+//    private List<Bitmap> detectFace(Bitmap bitmap) {
+//        List<Bitmap> faces = new ArrayList<>();
+//        Frame frame = new Frame.Builder().setBitmap(bitmap).build();
+//        SparseArray<Face> sparseArray = faceDetector.detect(frame);
+//        for (int i = 0; i < sparseArray.size(); i++) {
+//            Face face = sparseArray.valueAt(i);
+//            float left = face.getPosition().x;
+//            float top = face.getPosition().y;
+//            if (left < 0) {
+//                left = 0;
+//            }
+//            if (top < 0) {
+//                top = 0;
+//            }
+//            Bitmap result = Bitmap.createBitmap(bitmap, (int) left, (int) top, (int) face.getWidth(), (int) face.getHeight());
+//            faces.add(result);
+//        }
+//        return faces;
+//
+//    }
 
     private void predict() {
         ProgressDialog dialog = new ProgressDialog(CapNhatFaceActivity.this);
@@ -130,44 +179,37 @@ public class CapNhatFaceActivity extends AppCompatActivity {
             @Override
             public void onPictureTaken(@NonNull byte[] bytes) {
                 Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                List<Bitmap> faces = detectFace(bitmap);
-                if (faces.size() > 0) {
-                    for (Bitmap face :
-                            faces) {
-                        TensorBuffer inputFeature = TensorBuffer.createFixedSize(new int[]{DIM_BATCH_SIZE, DIM_IMG_SIZE_X, DIM_IMG_SIZE_X, 3}, DataType.FLOAT32);
-                        ByteBuffer byteBuffer = bitmapToBuffer(face);
-                        inputFeature.loadBuffer(byteBuffer);
-                        Model.Outputs outputs = model.process(inputFeature);
-                        float[] embFace = outputs.getOutputFeature0AsTensorBuffer().getFloatArray();
-                        Constants.sinhVien.setEmbFace(Constants.array2string(embFace));
-                        Log.e("TAG", "onPictureTaken: " + Constants.sinhVien.getEmbFace());
-                        Map<String, Object> map = new HashMap<>();
-                        map.put("masv", Constants.sinhVien.getMasv());
-                        map.put("EmbFace", Constants.sinhVien.getEmbFace());
-                        ApiService.api.updateSinhVien(map).enqueue(new Callback<Void>() {
-                            @Override
-                            public void onResponse(Call<Void> call, Response<Void> response) {
+                Bitmap face = detectFace(bitmap);
+                TensorBuffer inputFeature = TensorBuffer.createFixedSize(new int[]{DIM_BATCH_SIZE, DIM_IMG_SIZE_X, DIM_IMG_SIZE_X, 3}, DataType.FLOAT32);
+                ByteBuffer byteBuffer = bitmapToBuffer(face);
+                inputFeature.loadBuffer(byteBuffer);
+                Model.Outputs outputs = model.process(inputFeature);
+                float[] embFace = outputs.getOutputFeature0AsTensorBuffer().getFloatArray();
+                Constants.sinhVien.setEmbFace(Constants.array2string(embFace));
+                Log.e("TAG", "onPictureTaken: " + Constants.sinhVien.getEmbFace());
+                Map<String, Object> map = new HashMap<>();
+                map.put("masv", Constants.sinhVien.getMasv());
+                map.put("EmbFace", Constants.sinhVien.getEmbFace());
+                ApiService.api.updateSinhVien(map).enqueue(new Callback<Void>() {
+                    @Override
+                    public void onResponse(Call<Void> call, Response<Void> response) {
 
-                                if (response.isSuccessful()) {
-                                    Toast.makeText(getApplicationContext(), "Thành công", Toast.LENGTH_SHORT).show();
-                                    dialog.dismiss();
-                                } else {
-                                    Toast.makeText(getApplicationContext(), "Thất bại", Toast.LENGTH_SHORT).show();
-                                    dialog.dismiss();
-                                }
-                            }
-
-                            @Override
-                            public void onFailure(Call<Void> call, Throwable t) {
-                                Toast.makeText(getApplicationContext(), "Kết nối thất bại", Toast.LENGTH_SHORT).show();
-                                dialog.dismiss();
-                            }
-                        });
+                        if (response.isSuccessful()) {
+                            Toast.makeText(getApplicationContext(), "Thành công", Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        } else {
+                            Toast.makeText(getApplicationContext(), "Thất bại", Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        }
                     }
-                } else {
-                    Toast.makeText(getApplicationContext(), "Không phát hiện khuôn mặt", Toast.LENGTH_SHORT).show();
-                    dialog.dismiss();
-                }
+
+                    @Override
+                    public void onFailure(Call<Void> call, Throwable t) {
+                        Toast.makeText(getApplicationContext(), "Kết nối thất bại", Toast.LENGTH_SHORT).show();
+                        dialog.dismiss();
+                    }
+                });
+
             }
         });
     }
@@ -233,7 +275,7 @@ public class CapNhatFaceActivity extends AppCompatActivity {
                         .build());
         mCameraSource = new CameraSource.Builder(context, detector)
                 .setAutoFocusEnabled(true)
-                .setFacing(CameraSource.CAMERA_FACING_BACK)
+                .setFacing(CameraSource.CAMERA_FACING_FRONT)
                 .setRequestedPreviewSize(1080, 1080)
                 .setRequestedFps(30.0f)
                 .build();

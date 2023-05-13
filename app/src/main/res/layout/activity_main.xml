@@ -52,6 +52,9 @@
         android:textColor="@color/white"
         android:textSize="24sp" />
 
+
+
+
     <Button
         android:id="@+id/btn_cap_nhat_khuon_mat"
         android:layout_width="match_parent"

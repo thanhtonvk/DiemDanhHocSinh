@@ -3,10 +3,14 @@ package com.halonguniversity.diemdanh.activities;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.annotation.SuppressLint;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Toast;
 
+import com.google.android.gms.common.api.Api;
 import com.halonguniversity.diemdanh.R;
 import com.halonguniversity.diemdanh.adapters.SinhVienTCAdapter;
 import com.halonguniversity.diemdanh.entities.SinhVienLopTC;
@@ -35,7 +39,37 @@ public class LopHocTCActivity extends AppCompatActivity {
         findViewById(R.id.btn_diem_danh).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                startActivity(new Intent(getApplicationContext(),DiemDanhActivity.class));
+                startActivity(new Intent(getApplicationContext(), DiemDanhActivity.class));
+            }
+        });
+        findViewById(R.id.btn_create_dd).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                taoDiemDanh();
+            }
+        });
+    }
+
+    private void taoDiemDanh() {
+        ProgressDialog dialog = new ProgressDialog(LopHocTCActivity.this);
+        dialog.setTitle("Đang khởi tạo");
+        dialog.show();
+        ApiService.api.taoHdDD(Constants.maloptc, "").enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (response.isSuccessful()) {
+                    Toast.makeText(getApplicationContext(), "Tạo điểm danh thành công", Toast.LENGTH_SHORT).show();
+                    dialog.dismiss();
+                } else {
+                    Toast.makeText(getApplicationContext(), "Tạo điểm danh thất bại", Toast.LENGTH_SHORT).show();
+                    dialog.dismiss();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                Toast.makeText(getApplicationContext(), "Tạo điểm danh thất bại, lỗi kết nối", Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
             }
         });
     }

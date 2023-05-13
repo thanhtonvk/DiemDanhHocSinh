@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -18,6 +19,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.util.SparseArray;
 import android.view.MotionEvent;
 import android.view.View;
@@ -51,6 +53,7 @@ import com.halonguniversity.diemdanh.camera.GraphicFaceTrackerFactory;
 import com.halonguniversity.diemdanh.camera.GraphicOverlay;
 import com.halonguniversity.diemdanh.entities.SinhVien;
 import com.halonguniversity.diemdanh.ml.Model;
+import com.halonguniversity.diemdanh.ml.ModelLiveNess;
 import com.halonguniversity.diemdanh.service.ApiService;
 import com.halonguniversity.diemdanh.utils.Constants;
 
@@ -86,6 +89,7 @@ public class DiemDanhActivity extends AppCompatActivity {
     private static final float IMAGE_MEAN = 127.5f;
     private static final float IMAGE_STD = 127.5f;
     Model model;
+    ModelLiveNess modelLiveNess;
     List<SinhVien> sinhVienList;
 
     @Override
@@ -116,46 +120,49 @@ public class DiemDanhActivity extends AppCompatActivity {
     TextView tv_hs;
 
     private void predict() {
+        ProgressDialog dialog = new ProgressDialog(DiemDanhActivity.this);
+        dialog.setTitle("Đang nhận diện");
         findViewById(R.id.btn_capture).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                dialog.show();
                 mCameraSource.takePicture(null, new CameraSource.PictureCallback() {
                     @Override
                     public void onPictureTaken(@NonNull byte[] bytes) {
                         Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                        List<Bitmap> faces = detectFace(bitmap);
-                        if (faces.size() > 0) {
-                            for (Bitmap face :
-                                    faces) {
-                                TensorBuffer inputFeature = TensorBuffer.createFixedSize(new int[]{DIM_BATCH_SIZE, DIM_IMG_SIZE_X, DIM_IMG_SIZE_X, 3}, DataType.FLOAT32);
-                                ByteBuffer byteBuffer = bitmapToBuffer(face);
-                                inputFeature.loadBuffer(byteBuffer);
-                                Model.Outputs outputs = model.process(inputFeature);
-                                float[] embFace = outputs.getOutputFeature0AsTensorBuffer().getFloatArray();
-                                SinhVien sinhVien = findSinhVien(embFace);
-
-                                if (sinhVien != null) {
-                                    tv_hs.setText("Sinh viên " + sinhVien.getHoten());
-                                    ApiService.api.diemDanh(sinhVien.getMasv(), Constants.maloptc).enqueue(new Callback<Void>() {
-                                        @Override
-                                        public void onResponse(Call<Void> call, Response<Void> response) {
-                                            if (response.isSuccessful()) {
-                                                Toast.makeText(getApplicationContext(), sinhVien.getHoten() + " đã được điểm danh", Toast.LENGTH_SHORT).show();
-                                            } else {
-                                                Toast.makeText(getApplicationContext(), "điểm danh " + sinhVien.getHoten() + "thất bại", Toast.LENGTH_SHORT).show();
-                                            }
+                        if (detectLiveness(bitmap, 0.5f)) {
+                            Bitmap face = detectFace(bitmap);
+                            TensorBuffer inputFeature = TensorBuffer.createFixedSize(new int[]{DIM_BATCH_SIZE, DIM_IMG_SIZE_X, DIM_IMG_SIZE_X, 3}, DataType.FLOAT32);
+                            ByteBuffer byteBuffer = bitmapToBuffer(face);
+                            inputFeature.loadBuffer(byteBuffer);
+                            Model.Outputs outputs = model.process(inputFeature);
+                            float[] embFace = outputs.getOutputFeature0AsTensorBuffer().getFloatArray();
+                            SinhVien sinhVien = findSinhVien(embFace);
+                            if (sinhVien != null) {
+                                tv_hs.setText("Sinh viên " + sinhVien.getHoten());
+                                ApiService.api.diemDanh(sinhVien.getMasv(), Constants.maloptc).enqueue(new Callback<Void>() {
+                                    @Override
+                                    public void onResponse(Call<Void> call, Response<Void> response) {
+                                        if (response.isSuccessful()) {
+                                            Toast.makeText(getApplicationContext(), sinhVien.getHoten() + " đã được điểm danh", Toast.LENGTH_SHORT).show();
+                                            dialog.dismiss();
+                                        } else {
+                                            Toast.makeText(getApplicationContext(), "điểm danh " + sinhVien.getHoten() + "thất bại", Toast.LENGTH_SHORT).show();
+                                            dialog.dismiss();
                                         }
+                                    }
 
-                                        @Override
-                                        public void onFailure(Call<Void> call, Throwable t) {
-
-                                        }
-                                    });
-                                }
+                                    @Override
+                                    public void onFailure(Call<Void> call, Throwable t) {
+                                        dialog.dismiss();
+                                    }
+                                });
                             }
                         } else {
-                            Toast.makeText(getApplicationContext(), "Không tìm thấy sinh viên", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(DiemDanhActivity.this, "Phát hiện gian lận", Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
                         }
+
                     }
                 });
             }
@@ -163,7 +170,18 @@ public class DiemDanhActivity extends AppCompatActivity {
 
     }
 
-    float THRESHOLD_FACE = 0.4f;
+    private boolean detectLiveness(Bitmap bitmap, float threshold) {
+        TensorBuffer inputFeature = TensorBuffer.createFixedSize(new int[]{DIM_BATCH_SIZE, 224, 224, 3}, DataType.FLOAT32);
+        ByteBuffer byteBuffer = bitmapToBufferLiveness(bitmap);
+        inputFeature.loadBuffer(byteBuffer);
+        ModelLiveNess.Outputs outputs = modelLiveNess.process(inputFeature);
+        float[] results = outputs.getOutputFeature0AsTensorBuffer().getFloatArray();
+        if (results[0] < threshold)
+            return true;
+        return false;
+    }
+
+    float THRESHOLD_FACE = 0.5f;
 
     private SinhVien findSinhVien(float[] embFace) {
         SinhVien result = null;
@@ -171,6 +189,7 @@ public class DiemDanhActivity extends AppCompatActivity {
         ) {
             if (sinhVien.getEmbFace() != null) {
                 float[] embSV = Constants.string2array(sinhVien.getEmbFace());
+                Log.e("cosine", "findSinhVien: " + Constants.cosineSimilarity(embFace, embSV));
                 if (Constants.cosineSimilarity(embFace, embSV) >= THRESHOLD_FACE)
                     result = sinhVien;
             }
@@ -181,28 +200,88 @@ public class DiemDanhActivity extends AppCompatActivity {
 
     FaceDetector faceDetector;
 
-    private List<Bitmap> detectFace(Bitmap bitmap) {
-        List<Bitmap> faces = new ArrayList<>();
-        Frame frame = new Frame.Builder().setBitmap(bitmap).build();
+    private Bitmap detectFace(Bitmap bitmap) {
+        BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
+        bitmapOptions.inMutable = true;
+        Bitmap defaultBitmap = bitmap;
+        Paint rectPaint = new Paint();
+        rectPaint.setStrokeWidth(5);
+        rectPaint.setColor(Color.CYAN);
+        rectPaint.setStyle(Paint.Style.STROKE);
+
+        Bitmap temporaryBitmap = Bitmap.createBitmap(defaultBitmap.getWidth(), defaultBitmap
+                .getHeight(), Bitmap.Config.RGB_565);
+        Canvas canvas = new Canvas(temporaryBitmap);
+        canvas.drawBitmap(defaultBitmap, 0, 0, null);
+
+
+        Frame frame = new Frame.Builder().setBitmap(defaultBitmap).build();
         SparseArray<Face> sparseArray = faceDetector.detect(frame);
+        float left = 0, right = 0, top = 0, bottom = 0;
         for (int i = 0; i < sparseArray.size(); i++) {
             Face face = sparseArray.valueAt(i);
-            float left = face.getPosition().x;
-            float top = face.getPosition().y;
-            if (left < 0) {
-                left = 0;
-            }
-            if (top < 0) {
-                top = 0;
-            }
-            Bitmap result = Bitmap.createBitmap(bitmap, (int) left, (int) top, (int) face.getWidth(), (int) face.getHeight());
-            faces.add(result);
+            left = face.getPosition().x;
+            top = face.getPosition().y;
+            right = left + face.getWidth();
+            bottom = top + face.getHeight();
+            float cornerRadius = 2.0f;
+            RectF rectF = new RectF(left, top, right, bottom);
+            canvas.drawRoundRect(rectF, cornerRadius, cornerRadius, rectPaint);
         }
-        return faces;
+        if (left < 0 || top < 0 || bottom > bitmap.getHeight() || right > bitmap.getWidth() || bitmap.getWidth() <= 0 || bitmap.getHeight() <= 0) {
 
+            return bitmap;
+        } else {
+            if (right - left <= 0 || bottom - top <= 0) {
+
+                return bitmap;
+            } else {
+                Bitmap result = Bitmap.createBitmap(bitmap, (int) left, (int) top, (int) right - (int) left, (int) bottom - (int) top);
+
+                return result;
+            }
+        }
     }
+//    private List<Bitmap> detectFace(Bitmap bitmap) {
+//        List<Bitmap> faces = new ArrayList<>();
+//        Frame frame = new Frame.Builder().setBitmap(bitmap).build();
+//        SparseArray<Face> sparseArray = faceDetector.detect(frame);
+//        for (int i = 0; i < sparseArray.size(); i++) {
+//            Face face = sparseArray.valueAt(i);
+//            float left = face.getPosition().x;
+//            float top = face.getPosition().y;
+//            if (left < 0) {
+//                left = 0;
+//            }
+//            if (top < 0) {
+//                top = 0;
+//            }
+//            Bitmap result = Bitmap.createBitmap(bitmap, (int) left, (int) top, (int) face.getWidth(), (int) face.getHeight());
+//            faces.add(result);
+//        }
+//        return faces;
+//
+//    }
 
 
+
+    private ByteBuffer bitmapToBufferLiveness(Bitmap bitmap) {
+        bitmap = Bitmap.createScaledBitmap(bitmap, 224, 224, false);
+        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(4 * 224 * 224 * DIM_PIXEL_SIZE);
+        byteBuffer.order(ByteOrder.nativeOrder());
+        int[] intValues = new int[224 * 224];
+        bitmap.getPixels(intValues, 0, bitmap.getWidth(), 0, 0, bitmap.getWidth(), bitmap.getHeight());
+        int pixel = 0;
+        for (int i = 0; i < 224; i++) {
+            for (int j = 0; j < 224; j++) {
+                int input = intValues[pixel++];
+                byteBuffer.putFloat((((input >> 16 & 0xFF) - IMAGE_MEAN) / IMAGE_STD));
+                byteBuffer.putFloat((((input >> 8 & 0xFF) - IMAGE_MEAN) / IMAGE_STD));
+                byteBuffer.putFloat((((input & 0xFF) - IMAGE_MEAN) / IMAGE_STD));
+            }
+        }
+        return byteBuffer;
+    }
     private ByteBuffer bitmapToBuffer(Bitmap bitmap) {
         bitmap = Bitmap.createScaledBitmap(bitmap, DIM_IMG_SIZE_X, DIM_IMG_SIZE_Y, false);
         ByteBuffer byteBuffer = ByteBuffer.allocateDirect(4 * DIM_IMG_SIZE_X * DIM_IMG_SIZE_Y * DIM_PIXEL_SIZE);
@@ -242,6 +321,7 @@ public class DiemDanhActivity extends AppCompatActivity {
         mGraphicOverlay = findViewById(R.id.faceOverlay);
         try {
             model = Model.newInstance(DiemDanhActivity.this);
+            modelLiveNess = ModelLiveNess.newInstance(DiemDanhActivity.this);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -279,7 +359,7 @@ public class DiemDanhActivity extends AppCompatActivity {
                         .build());
         mCameraSource = new CameraSource.Builder(context, detector)
                 .setAutoFocusEnabled(true)
-                .setFacing(CameraSource.CAMERA_FACING_BACK)
+                .setFacing(CameraSource.CAMERA_FACING_FRONT)
                 .setRequestedPreviewSize(1080, 1080)
                 .setRequestedFps(30.0f)
                 .build();
