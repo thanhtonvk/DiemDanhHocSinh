@@ -276,7 +276,7 @@ public class CapNhatFaceActivity extends AppCompatActivity {
         mCameraSource = new CameraSource.Builder(context, detector)
                 .setAutoFocusEnabled(true)
                 .setFacing(CameraSource.CAMERA_FACING_FRONT)
-                .setRequestedPreviewSize(1080, 1080)
+                .setRequestedPreviewSize(1280, 720)
                 .setRequestedFps(30.0f)
                 .build();
     }

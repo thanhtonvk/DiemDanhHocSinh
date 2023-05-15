@@ -181,20 +181,23 @@ public class DiemDanhActivity extends AppCompatActivity {
         return false;
     }
 
-    float THRESHOLD_FACE = 0.5f;
+    float THRESHOLD_FACE = 0.8f;
 
     private SinhVien findSinhVien(float[] embFace) {
         SinhVien result = null;
-        for (SinhVien sinhVien : sinhVienList
-        ) {
-            if (sinhVien.getEmbFace() != null) {
-                float[] embSV = Constants.string2array(sinhVien.getEmbFace());
-                Log.e("cosine", "findSinhVien: " + Constants.cosineSimilarity(embFace, embSV));
-                if (Constants.cosineSimilarity(embFace, embSV) >= THRESHOLD_FACE)
-                    result = sinhVien;
-            }
+        if(sinhVienList!=null){
+            for (SinhVien sinhVien : sinhVienList
+            ) {
+                if (sinhVien.getEmbFace() != null) {
+                    float[] embSV = Constants.string2array(sinhVien.getEmbFace());
+                    Log.e("cosine", "findSinhVien: " + Constants.cosineSimilarity(embFace, embSV));
+                    if (Constants.cosineSimilarity(embFace, embSV) >= THRESHOLD_FACE)
+                        result = sinhVien;
+                }
 
+            }
         }
+
         return result;
     }
 
@@ -360,7 +363,7 @@ public class DiemDanhActivity extends AppCompatActivity {
         mCameraSource = new CameraSource.Builder(context, detector)
                 .setAutoFocusEnabled(true)
                 .setFacing(CameraSource.CAMERA_FACING_FRONT)
-                .setRequestedPreviewSize(1080, 1080)
+                .setRequestedPreviewSize(1280, 720)
                 .setRequestedFps(30.0f)
                 .build();
     }

@@ -116,7 +116,7 @@ public class CameraSourcePreview extends ViewGroup {
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-        int width =1280;
+        int width =720;
         int height = 1280;
         if (mCameraSource != null) {
             Size size = mCameraSource.getPreviewSize();
@@ -125,11 +125,11 @@ public class CameraSourcePreview extends ViewGroup {
                 height = size.getHeight();
             }
         }
-        if (isPortraitMode()) {
-            int tmp = width;
-            width = height;
-            height = tmp;
-        }
+//        if (isPortraitMode()) {
+//            int tmp = width;
+//            width = height;
+//            height = tmp;
+//        }
 
         final int layoutWidth = right - left;
         final int layoutHeight = bottom - top;

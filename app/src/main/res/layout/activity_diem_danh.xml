@@ -45,8 +45,8 @@
 
         <com.halonguniversity.diemdanh.camera.CameraSourcePreview
             android:id="@+id/preview"
-            android:layout_width="480dp"
-            android:layout_height="480dp"
+            android:layout_width="1080dp"
+            android:layout_height="1920dp"
             android:layout_centerInParent="true"
             android:layout_gravity="center">
 
