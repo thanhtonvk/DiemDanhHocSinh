@@ -35,27 +35,60 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <Button
+                android:visibility="gone"
+                android:id="@+id/btn_diem_danh"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/border_editext"
+                android:backgroundTint="#2196F3"
+                android:text="Điểm danh"
+                android:textColor="@color/white" />
+
+
+            <Button
+                android:visibility="gone"
+                android:id="@+id/btn_end"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/border_editext"
+                android:backgroundTint="#FF5722"
+                android:text="Kết thúc"
+                android:textColor="@color/white" />
+
+            <Button
+                android:visibility="gone"
+                android:id="@+id/btn_cancel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/border_editext"
+                android:backgroundTint="#E91E1E"
+                android:text="Hủy"
+                android:textColor="@color/white" />
+        </LinearLayout>
+
         <Button
+            android:visibility="gone"
             android:id="@+id/btn_create_dd"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="5dp"
             android:layout_weight="1"
             android:background="@drawable/border_editext"
-            android:backgroundTint="#FF5722"
+            android:backgroundTint="#4CAF50"
             android:text="Tạo điểm danh"
             android:textColor="@color/white" />
 
-        <Button
-            android:id="@+id/btn_diem_danh"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_margin="5dp"
-            android:layout_weight="1"
-            android:background="@drawable/border_editext"
-            android:backgroundTint="#2196F3"
-            android:text="Điểm danh"
-            android:textColor="@color/white" />
 
     </LinearLayout>
 

@@ -23,7 +23,7 @@ import retrofit2.http.PUT;
 import retrofit2.http.Query;
 
 public interface ApiService {
-//    String BASE_URL = "https://lastsparklycat86.conveyor.cloud/";
+    //    String BASE_URL = "https://lastsparklycat86.conveyor.cloud/";
     Gson gson = new GsonBuilder().setDateFormat("dd/MM/yyyy").create();
     OkHttpClient client = new OkHttpClient.Builder()
             .connectTimeout(100, TimeUnit.SECONDS).writeTimeout(100, TimeUnit.SECONDS)
@@ -39,14 +39,25 @@ public interface ApiService {
     Call<List<SinhVienLopTC>> getDsLopHocTC(@Query("maloptc") int maloptc);
 
     @POST("TaoHdDD")
-    Call<Void> taoHdDD(@Query("maloptc") int maloptc, @Query("diadiem") String diaDiem);
+    Call<Void> taoHdDD(@Query("maloptc") int maloptc);
+
+
+    @POST("HuyHdDD")
+    Call<Void> huyHdDD(@Query("maloptc") int maloptc);
+
+    @POST("KetthucHdDD")
+    Call<Void> ketThucHdDD(@Query("maloptc") int maloptc);
 
     @PUT("PutTrangThaiDD")
-    Call<Void> diemDanh(@Query("masv") int masv, @Query("maloptc") int maloptc);
+    Call<Void> diemDanh(@Query("masv") String masv, @Query("maloptc") int maloptc);
 
     @POST("UpdateSinhVien")
     Call<Void> updateSinhVien(@Body Map<String, Object> thongTin);
 
     @GET("GetAllSinhviens")
     Call<List<SinhVien>> getAllSV();
+
+    @GET("GetStatus")
+    Call<Boolean> getStatus(@Query("maloptc") int maloptc);
+
 }

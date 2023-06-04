@@ -1,14 +1,25 @@
 package com.halonguniversity.diemdanh.entities;
 
 public class SinhVien {
-    private int masv;
+    private String masv;
     private String hoten;
-    private boolean gioitinh;
+    private String gioitinh;
     private int malophc;
     private String khoa;
+    private String tenlophc;
     private String EmbFace;
 
-    public SinhVien(int masv, String hoten, boolean gioitinh, int malophc, String khoa, String embFace) {
+    public SinhVien(String masv, String hoten, String gioitinh, int malophc, String khoa, String tenlophc, String embFace) {
+        this.masv = masv;
+        this.hoten = hoten;
+        this.gioitinh = gioitinh;
+        this.malophc = malophc;
+        this.khoa = khoa;
+        this.tenlophc = tenlophc;
+        EmbFace = embFace;
+    }
+
+    public SinhVien(String masv, String hoten, String gioitinh, int malophc, String khoa, String embFace) {
         this.masv = masv;
         this.hoten = hoten;
         this.gioitinh = gioitinh;
@@ -17,11 +28,19 @@ public class SinhVien {
         EmbFace = embFace;
     }
 
-    public int getMasv() {
+    public String getTenlophc() {
+        return tenlophc;
+    }
+
+    public void setTenlophc(String tenlophc) {
+        this.tenlophc = tenlophc;
+    }
+
+    public String getMasv() {
         return masv;
     }
 
-    public void setMasv(int masv) {
+    public void setMasv(String masv) {
         this.masv = masv;
     }
 
@@ -33,11 +52,11 @@ public class SinhVien {
         this.hoten = hoten;
     }
 
-    public boolean isGioitinh() {
+    public String getGioitinh() {
         return gioitinh;
     }
 
-    public void setGioitinh(boolean gioitinh) {
+    public void setGioitinh(String gioitinh) {
         this.gioitinh = gioitinh;
     }
 

@@ -38,7 +38,7 @@ public class SinhVienAdapter extends RecyclerView.Adapter<SinhVienAdapter.ViewHo
     public void onBindViewHolder(@NonNull SinhVienAdapter.ViewHolder holder, int position) {
         SinhVien sinhVien = sinhVienList.get(position);
         holder.tvHoTen.setText(sinhVien.getHoten());
-        holder.tvId.setText("Lớp: " + sinhVien.getMalophc() + "");
+        holder.tvId.setText("Lớp: " + sinhVien.getTenlophc() + "");
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
