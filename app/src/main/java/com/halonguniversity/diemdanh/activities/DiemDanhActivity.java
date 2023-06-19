@@ -55,6 +55,7 @@ import com.halonguniversity.diemdanh.entities.SinhVien;
 import com.halonguniversity.diemdanh.ml.Model;
 import com.halonguniversity.diemdanh.ml.ModelLiveNess;
 import com.halonguniversity.diemdanh.service.ApiService;
+import com.halonguniversity.diemdanh.service.FlaskAPI;
 import com.halonguniversity.diemdanh.utils.Constants;
 
 
@@ -62,16 +63,21 @@ import org.tensorflow.lite.DataType;
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -132,32 +138,82 @@ public class DiemDanhActivity extends AppCompatActivity {
                         Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
                         if (detectLiveness(bitmap, 0.5f)) {
                             Bitmap face = detectFace(bitmap);
-                            TensorBuffer inputFeature = TensorBuffer.createFixedSize(new int[]{DIM_BATCH_SIZE, DIM_IMG_SIZE_X, DIM_IMG_SIZE_X, 3}, DataType.FLOAT32);
-                            ByteBuffer byteBuffer = bitmapToBuffer(face);
-                            inputFeature.loadBuffer(byteBuffer);
-                            Model.Outputs outputs = model.process(inputFeature);
-                            float[] embFace = outputs.getOutputFeature0AsTensorBuffer().getFloatArray();
-                            SinhVien sinhVien = findSinhVien(embFace);
-                            if (sinhVien != null) {
-                                tv_hs.setText("Sinh viên " + sinhVien.getHoten());
-                                ApiService.api.diemDanh(sinhVien.getMasv(), Constants.maloptc).enqueue(new Callback<Void>() {
+                            try {
+                                File file = null;
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                    file = Constants.savebitmap(DiemDanhActivity.this, face, "face" + LocalDateTime.now().toString());
+                                }
+                                RequestBody requestFile =
+                                        RequestBody.create(MediaType.parse("multipart/form-data"), file);
+
+// MultipartBody.Part is used to send also the actual file name
+                                MultipartBody.Part body =
+                                        MultipartBody.Part.createFormData("file", file.getName(), requestFile);
+                                FlaskAPI.api.searchFace(body).enqueue(new Callback<String>() {
                                     @Override
-                                    public void onResponse(Call<Void> call, Response<Void> response) {
+                                    public void onResponse(Call<String> call, Response<String> response) {
                                         if (response.isSuccessful()) {
-                                            Toast.makeText(getApplicationContext(), sinhVien.getHoten() + " đã được điểm danh", Toast.LENGTH_SHORT).show();
+                                            String masv = response.body();
+                                            ApiService.api.diemDanh(masv, Constants.maloptc).enqueue(new Callback<Void>() {
+                                                @Override
+                                                public void onResponse(Call<Void> call, Response<Void> response) {
+                                                    if (response.isSuccessful()) {
+                                                        Toast.makeText(getApplicationContext(), "Sinh viên " + masv + " đã được điểm danh", Toast.LENGTH_SHORT).show();
+                                                        dialog.dismiss();
+                                                    } else {
+                                                        Toast.makeText(getApplicationContext(), "điểm danh " + masv + "thất bại", Toast.LENGTH_SHORT).show();
+                                                        dialog.dismiss();
+                                                    }
+                                                }
+
+                                                @Override
+                                                public void onFailure(Call<Void> call, Throwable t) {
+                                                    dialog.dismiss();
+                                                }
+                                            });
+                                            Toast.makeText(getApplicationContext(), "Thành công", Toast.LENGTH_SHORT).show();
                                             dialog.dismiss();
                                         } else {
-                                            Toast.makeText(getApplicationContext(), "điểm danh " + sinhVien.getHoten() + "thất bại", Toast.LENGTH_SHORT).show();
+                                            Toast.makeText(getApplicationContext(), "Thất bại", Toast.LENGTH_SHORT).show();
                                             dialog.dismiss();
                                         }
                                     }
 
                                     @Override
-                                    public void onFailure(Call<Void> call, Throwable t) {
+                                    public void onFailure(Call<String> call, Throwable t) {
+                                        Toast.makeText(getApplicationContext(), "Kết nối thất bại", Toast.LENGTH_SHORT).show();
                                         dialog.dismiss();
                                     }
                                 });
+                            } catch (IOException e) {
+                                e.printStackTrace();
                             }
+//                            TensorBuffer inputFeature = TensorBuffer.createFixedSize(new int[]{DIM_BATCH_SIZE, DIM_IMG_SIZE_X, DIM_IMG_SIZE_X, 3}, DataType.FLOAT32);
+//                            ByteBuffer byteBuffer = bitmapToBuffer(face);
+//                            inputFeature.loadBuffer(byteBuffer);
+//                            Model.Outputs outputs = model.process(inputFeature);
+//                            float[] embFace = outputs.getOutputFeature0AsTensorBuffer().getFloatArray();
+//                            SinhVien sinhVien = findSinhVien(embFace);
+//                            if (sinhVien != null) {
+//                                tv_hs.setText("Sinh viên " + sinhVien.getHoten());
+//                                ApiService.api.diemDanh(sinhVien.getMasv(), Constants.maloptc).enqueue(new Callback<Void>() {
+//                                    @Override
+//                                    public void onResponse(Call<Void> call, Response<Void> response) {
+//                                        if (response.isSuccessful()) {
+//                                            Toast.makeText(getApplicationContext(), sinhVien.getHoten() + " đã được điểm danh", Toast.LENGTH_SHORT).show();
+//                                            dialog.dismiss();
+//                                        } else {
+//                                            Toast.makeText(getApplicationContext(), "điểm danh " + sinhVien.getHoten() + "thất bại", Toast.LENGTH_SHORT).show();
+//                                            dialog.dismiss();
+//                                        }
+//                                    }
+//
+//                                    @Override
+//                                    public void onFailure(Call<Void> call, Throwable t) {
+//                                        dialog.dismiss();
+//                                    }
+//                                });
+//                            }
                         } else {
                             Toast.makeText(DiemDanhActivity.this, "Phát hiện gian lận", Toast.LENGTH_SHORT).show();
                             dialog.dismiss();
@@ -185,7 +241,7 @@ public class DiemDanhActivity extends AppCompatActivity {
 
     private SinhVien findSinhVien(float[] embFace) {
         SinhVien result = null;
-        if(sinhVienList!=null){
+        if (sinhVienList != null) {
             for (SinhVien sinhVien : sinhVienList
             ) {
                 if (sinhVien.getEmbFace() != null) {
@@ -267,7 +323,6 @@ public class DiemDanhActivity extends AppCompatActivity {
 //    }
 
 
-
     private ByteBuffer bitmapToBufferLiveness(Bitmap bitmap) {
         bitmap = Bitmap.createScaledBitmap(bitmap, 224, 224, false);
         ByteBuffer byteBuffer = ByteBuffer.allocateDirect(4 * 224 * 224 * DIM_PIXEL_SIZE);
@@ -285,6 +340,7 @@ public class DiemDanhActivity extends AppCompatActivity {
         }
         return byteBuffer;
     }
+
     private ByteBuffer bitmapToBuffer(Bitmap bitmap) {
         bitmap = Bitmap.createScaledBitmap(bitmap, DIM_IMG_SIZE_X, DIM_IMG_SIZE_Y, false);
         ByteBuffer byteBuffer = ByteBuffer.allocateDirect(4 * DIM_IMG_SIZE_X * DIM_IMG_SIZE_Y * DIM_PIXEL_SIZE);

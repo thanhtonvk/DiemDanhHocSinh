@@ -29,6 +29,7 @@ import android.widget.Toast;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.Api;
+import com.google.android.gms.common.internal.service.Common;
 import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.MultiProcessor;
@@ -43,19 +44,25 @@ import com.halonguniversity.diemdanh.entities.SinhVien;
 import com.halonguniversity.diemdanh.entities.SinhVienLopTC;
 import com.halonguniversity.diemdanh.ml.Model;
 import com.halonguniversity.diemdanh.service.ApiService;
+import com.halonguniversity.diemdanh.service.FlaskAPI;
 import com.halonguniversity.diemdanh.utils.Constants;
 
 import org.tensorflow.lite.DataType;
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -180,36 +187,63 @@ public class CapNhatFaceActivity extends AppCompatActivity {
             public void onPictureTaken(@NonNull byte[] bytes) {
                 Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
                 Bitmap face = detectFace(bitmap);
-                TensorBuffer inputFeature = TensorBuffer.createFixedSize(new int[]{DIM_BATCH_SIZE, DIM_IMG_SIZE_X, DIM_IMG_SIZE_X, 3}, DataType.FLOAT32);
-                ByteBuffer byteBuffer = bitmapToBuffer(face);
-                inputFeature.loadBuffer(byteBuffer);
-                Model.Outputs outputs = model.process(inputFeature);
-                float[] embFace = outputs.getOutputFeature0AsTensorBuffer().getFloatArray();
-                Constants.sinhVien.setEmbFace(Constants.array2string(embFace));
-                Log.e("TAG", "onPictureTaken: " + Constants.sinhVien.getEmbFace());
-                Map<String, Object> map = new HashMap<>();
-                map.put("masv", Constants.sinhVien.getMasv());
-                map.put("EmbFace", Constants.sinhVien.getEmbFace());
-                ApiService.api.updateSinhVien(map).enqueue(new Callback<Void>() {
-                    @Override
-                    public void onResponse(Call<Void> call, Response<Void> response) {
+                try {
+                    File file = null;
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        file = Constants.savebitmap(CapNhatFaceActivity.this, face, "face" + LocalDateTime.now().toString());
+                    }
+                    RequestBody requestFile =
+                            RequestBody.create(MediaType.parse("multipart/form-data"), file);
 
-                        if (response.isSuccessful()) {
-                            Toast.makeText(getApplicationContext(), "Thành công", Toast.LENGTH_SHORT).show();
-                            dialog.dismiss();
-                        } else {
-                            Toast.makeText(getApplicationContext(), "Thất bại", Toast.LENGTH_SHORT).show();
+// MultipartBody.Part is used to send also the actual file name
+                    MultipartBody.Part body =
+                            MultipartBody.Part.createFormData("file", file.getName(), requestFile);
+
+
+                    FlaskAPI.api.addFace(Constants.sinhVien.getMasv(), body).enqueue(new Callback<String>() {
+                        @Override
+                        public void onResponse(Call<String> call, Response<String> response) {
+                            if (response.isSuccessful()) {
+                                Toast.makeText(getApplicationContext(), "Thành công", Toast.LENGTH_SHORT).show();
+                                dialog.dismiss();
+                            } else {
+                                Toast.makeText(getApplicationContext(), "Thất bại", Toast.LENGTH_SHORT).show();
+                                dialog.dismiss();
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(Call<String> call, Throwable t) {
+                            Toast.makeText(getApplicationContext(), "Kết nối thất bại", Toast.LENGTH_SHORT).show();
                             dialog.dismiss();
                         }
-                    }
-
-                    @Override
-                    public void onFailure(Call<Void> call, Throwable t) {
-                        Toast.makeText(getApplicationContext(), "Kết nối thất bại", Toast.LENGTH_SHORT).show();
-                        dialog.dismiss();
-                    }
-                });
-
+                    });
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+//                TensorBuffer inputFeature = TensorBuffer.createFixedSize(new int[]{DIM_BATCH_SIZE, DIM_IMG_SIZE_X, DIM_IMG_SIZE_X, 3}, DataType.FLOAT32);
+//                ByteBuffer byteBuffer = bitmapToBuffer(face);
+//                inputFeature.loadBuffer(byteBuffer);
+//                Model.Outputs outputs = model.process(inputFeature);
+//                float[] embFace = outputs.getOutputFeature0AsTensorBuffer().getFloatArray();
+//                Constants.sinhVien.setEmbFace(Constants.array2string(embFace));
+//                Log.e("TAG", "onPictureTaken: " + Constants.sinhVien.getEmbFace());
+//                Map<String, Object> map = new HashMap<>();
+//                map.put("masv", Constants.sinhVien.getMasv());
+//                map.put("EmbFace", Constants.sinhVien.getEmbFace());
+//                ApiService.api.updateSinhVien(map).enqueue(new Callback<Void>() {
+//                    @Override
+//                    public void onResponse(Call<Void> call, Response<Void> response) {
+//
+//
+//                    }
+//
+//                    @Override
+//                    public void onFailure(Call<Void> call, Throwable t) {
+//
+//                    }
+//                });
+//
             }
         });
     }

@@ -73,6 +73,7 @@ public class LopHocTCActivity extends AppCompatActivity {
             public void onResponse(Call<Void> call, Response<Void> response) {
                 if (response.isSuccessful()) {
                     Toast.makeText(getApplicationContext(), "Kết thúc điểm danh thành công", Toast.LENGTH_SHORT).show();
+                    checkStatus();
                     dialog.dismiss();
                 } else {
                     Toast.makeText(getApplicationContext(), "Kết thúc điểm danh thất bại", Toast.LENGTH_SHORT).show();
@@ -97,6 +98,7 @@ public class LopHocTCActivity extends AppCompatActivity {
             public void onResponse(Call<Void> call, Response<Void> response) {
                 if (response.isSuccessful()) {
                     Toast.makeText(getApplicationContext(), "Hủy điểm danh thành công", Toast.LENGTH_SHORT).show();
+                    checkStatus();
                     dialog.dismiss();
                 } else {
                     Toast.makeText(getApplicationContext(), "Hủy điểm danh thất bại", Toast.LENGTH_SHORT).show();
@@ -121,6 +123,7 @@ public class LopHocTCActivity extends AppCompatActivity {
             public void onResponse(Call<Void> call, Response<Void> response) {
                 if (response.isSuccessful()) {
                     Toast.makeText(getApplicationContext(), "Tạo điểm danh thành công", Toast.LENGTH_SHORT).show();
+                    checkStatus();
                     dialog.dismiss();
                 } else {
                     Toast.makeText(getApplicationContext(), "Tạo điểm danh thất bại", Toast.LENGTH_SHORT).show();
@@ -164,31 +167,22 @@ public class LopHocTCActivity extends AppCompatActivity {
     }
 
     private void load() {
-        Handler handler = new Handler();
-        final Runnable r = new Runnable() {
-            public void run() {
-                ApiService.api.getDsLopHocTC(Constants.maloptc).enqueue(new Callback<List<SinhVienLopTC>>() {
-                    @Override
-                    public void onResponse(Call<List<SinhVienLopTC>> call, Response<List<SinhVienLopTC>> response) {
-                        if (response.isSuccessful()) {
-                            sinhVienList = response.body();
-                            adapter = new SinhVienTCAdapter(getApplicationContext(), sinhVienList);
-                            rcvSV.setAdapter(adapter);
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Call<List<SinhVienLopTC>> call, Throwable t) {
-
-                    }
-                });
-
-                checkStatus();
-                handler.postDelayed(this, 2000);
+        ApiService.api.getDsLopHocTC(Constants.maloptc).enqueue(new Callback<List<SinhVienLopTC>>() {
+            @Override
+            public void onResponse(Call<List<SinhVienLopTC>> call, Response<List<SinhVienLopTC>> response) {
+                if (response.isSuccessful()) {
+                    sinhVienList = response.body();
+                    adapter = new SinhVienTCAdapter(getApplicationContext(), sinhVienList);
+                    rcvSV.setAdapter(adapter);
+                }
             }
-        };
 
-        handler.postDelayed(r, 2000);
+            @Override
+            public void onFailure(Call<List<SinhVienLopTC>> call, Throwable t) {
+
+            }
+        });
+
 
     }
 }
